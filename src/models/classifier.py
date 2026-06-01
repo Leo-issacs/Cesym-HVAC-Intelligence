@@ -114,6 +114,7 @@ def construir_pipeline() -> Pipeline:
         ngram_range=(1, 2),
         min_df=1,
         sublinear_tf=True,
+        lowercase=False,       # la normalización ya dejó todo en mayúsculas
         token_pattern=r"[A-Z0-9]+",
     )
     clasificador = LogisticRegression(

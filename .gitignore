@@ -1,5 +1,7 @@
 # Entorno virtual
 cesym_data_analytics/
+venv/
+.venv/
 
 # Python
 __pycache__/
@@ -8,7 +10,10 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 
-# Datos generados (se recrean con el pipeline)
+# Datos fuente — contienen información confidencial de clientes
+data/raw/
+
+# Datos generados (se recrean ejecutando el pipeline)
 data/db/
 data/processed/*.csv
 data/processed/*.png
@@ -18,7 +23,13 @@ data/processed/*.joblib
 
 # Jupyter
 .ipynb_checkpoints/
-*.ipynb
+
+# Scripts temporales de desarrollo
+_*.py
+_screenshot_dashboard.py
+
+# Claude Code
+.claude/
 
 # IDEs
 .vscode/
