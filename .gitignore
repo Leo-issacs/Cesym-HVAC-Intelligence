@@ -12,6 +12,7 @@ __pycache__/
 data/db/
 data/processed/*.csv
 data/processed/*.png
+data/processed/*.joblib
 # Excepción: dataset de etiquetas curado manualmente (no es un output del pipeline)
 !data/processed/conceptos_clasificados.csv
 
