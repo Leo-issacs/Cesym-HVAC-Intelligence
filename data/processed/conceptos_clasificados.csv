@@ -1,0 +1,74 @@
+﻿concepto,etiqueta_auto,categoria_modelo
+SERVICIO DE MANTENIMIENTO A EQUIPOS DE AIRE ACONDICIONADO,mantenimiento_preventivo,mantenimiento_preventivo
+MANTENIMIENTO PREVENTIVO A UNIDADES MINISPLIT,mantenimiento_preventivo,mantenimiento_preventivo
+SERVICIO DE MANTENIMIENTO Y LIMPIEZA A EQUIPO DE REFRIGERACION,mantenimiento_preventivo,mantenimiento_preventivo
+REVISION Y LIMPIEZA A SISTEMA DE CLIMATIZACION,mantenimiento_preventivo,mantenimiento_preventivo
+MANTENIMIENTO PREVENTIVO TRIMESTRAL A CHILLER YORK,mantenimiento_preventivo,mantenimiento_preventivo
+SERVICIO DE MANTENIMIENTO A EQUIPOS HVAC SUCURSAL MONTERREY,mantenimiento_preventivo,mantenimiento_preventivo
+LIMPIEZA DE FILTROS Y VERIFICACION DE OPERACION DE EQUIPOS,mantenimiento_preventivo,mantenimiento_preventivo
+MANTENIMIENTO A UNIDADES CONDENSADORAS EN AZOTEA,mantenimiento_preventivo,mantenimiento_preventivo
+INSPECCION Y AJUSTE DE EQUIPOS DE AIRE ACONDICIONADO,mantenimiento_preventivo,mantenimiento_preventivo
+MANTENIMIENTO SEMESTRAL A MANEJADORAS DE AIRE,mantenimiento_preventivo,mantenimiento_preventivo
+SERVICIO DE MANTENIMIENTO PREVENTIVO A EQUIPOS DE REFRIGERACION COMERCIAL,mantenimiento_preventivo,mantenimiento_preventivo
+REVISION GENERAL DE EQUIPOS SPLIT Y MINI SPLIT,mantenimiento_preventivo,mantenimiento_preventivo
+VERIFICACION DE PRESIONES Y CARGA DE GAS REFRIGERANTE,mantenimiento_preventivo,mantenimiento_preventivo
+SERVICIO DE MANTENIMIENTO A FANCOILS DE OFICINAS,mantenimiento_preventivo,mantenimiento_preventivo
+LIMPIEZA PROFUNDA DE CONDENSADORES Y EVAPORADORES,mantenimiento_preventivo,mantenimiento_preventivo
+REPARACION DE COMPRESOR EN EQUIPO SPLIT 5 TONELADAS,mantenimiento_correctivo,mantenimiento_correctivo
+ATENCION A FALLA EN SISTEMA DE ENFRIAMIENTO PLANTA 2,mantenimiento_correctivo,mantenimiento_correctivo
+MANTENIMIENTO CORRECTIVO A CHILLER CARRIER SUCURSAL NORTE,mantenimiento_correctivo,mantenimiento_correctivo
+REPARACION DE FUGA DE GAS REFRIGERANTE R22,mantenimiento_correctivo,mantenimiento_correctivo
+DIAGNOSTICO Y REPARACION DE MANEJADORA YORK,mantenimiento_correctivo,mantenimiento_correctivo
+ATENCION DE EMERGENCIA POR FALLA EN CONDENSADOR,mantenimiento_correctivo,mantenimiento_correctivo
+REPARACION TARJETA ELECTRONICA EQUIPO DAIKIN,mantenimiento_correctivo,mantenimiento_correctivo
+CORRECTIVO A UNIDAD MINISPLIT POR FALLA DE VENTILADOR,mantenimiento_correctivo,mantenimiento_correctivo
+SERVICIO CORRECTIVO EN EQUIPO LENNOX TIENDA REFORMA,mantenimiento_correctivo,mantenimiento_correctivo
+REPARACION DE AVERIA EN BOMBA DE CALOR EDIFICIO CENTRAL,mantenimiento_correctivo,mantenimiento_correctivo
+ATENCION A FALLA ELECTRICA EN MANEJADORA DE AIRE,mantenimiento_correctivo,mantenimiento_correctivo
+DIAGNOSTICO EQUIPO CON FALLA INTERMITENTE DE ENFRIAMIENTO,mantenimiento_correctivo,mantenimiento_correctivo
+REPARACION SISTEMA DE REFRIGERACION CAMARA FRIA,mantenimiento_correctivo,mantenimiento_correctivo
+CORRECTIVO POR SOBRECALENTAMIENTO EN UNIDAD CONDENSADORA,mantenimiento_correctivo,mantenimiento_correctivo
+ATENCION A FUGA DE REFRIGERANTE R410A EN SUCURSAL GDLAJARA,mantenimiento_correctivo,mantenimiento_correctivo
+ADECUACION EN SISTEMAS DE CONTROL ELECTRICO PLANTA NORTE,instalacion_nueva,instalacion_nueva
+INSTALACION DE EQUIPO DE AIRE ACONDICIONADO TIPO CASSETTE,instalacion_nueva,instalacion_nueva
+INSTALACION NUEVA DE SISTEMA VRF EN EDIFICIO CORPORATIVO,instalacion_nueva,instalacion_nueva
+PUESTA EN MARCHA DE CHILLER TRANE 60 TONELADAS,instalacion_nueva,instalacion_nueva
+MONTAJE E INSTALACION DE MANEJADORAS DE AIRE PISO 3,instalacion_nueva,instalacion_nueva
+INSTALACION DE RED DE DUCTOS EN AREA DE PRODUCCION,instalacion_nueva,instalacion_nueva
+ADECUACION Y AMPLIACION DE SISTEMA HVAC TIENDA PERISUR,instalacion_nueva,instalacion_nueva
+OBRA DE INSTALACION HVAC EN SUCURSAL NUEVA GUADALAJARA,instalacion_nueva,instalacion_nueva
+INSTALACION DE EQUIPOS SPLIT ZONA ADMINISTRATIVA,instalacion_nueva,instalacion_nueva
+PUESTA EN MARCHA Y COMISIONAMIENTO SISTEMA DE CLIMA DATACENTER,instalacion_nueva,instalacion_nueva
+INSTALACION DE SISTEMA DE EXTRACCION DE AIRE BODEGA,instalacion_nueva,instalacion_nueva
+ADECUACION DE DUCTOS PARA NUEVA DISTRIBUCION EN PLANTA,instalacion_nueva,instalacion_nueva
+MONTAJE DE UNIDADES CONDENSADORAS EN AZOTEA EDIFICIO B,instalacion_nueva,instalacion_nueva
+INSTALACION DE SISTEMA DE CLIMATIZACION SALA DE SERVIDORES,instalacion_nueva,instalacion_nueva
+AMPLIACION DE RED DE REFRIGERACION AREA DE CARNES,instalacion_nueva,instalacion_nueva
+COMPRESOR DANFOSS SCROLLA PARA CHILLER CARRIER,venta_refaccion,venta_refaccion
+VALVULA DE EXPANSION ELECTRONICA EMERSON R410A,venta_refaccion,venta_refaccion
+FILTRO DESHIDRATADOR PARA EQUIPO DE REFRIGERACION,venta_refaccion,venta_refaccion
+MOTOR VENTILADOR EVAPORADOR 1/4 HP 208-230V,venta_refaccion,venta_refaccion
+CAPACITOR DE ARRANQUE 45/5 MFD PARA COMPRESOR,venta_refaccion,venta_refaccion
+CONTACTOR TRIPOLAR 30A PARA CONDENSADORA,venta_refaccion,venta_refaccion
+TERMOSTATO DIGITAL HONEYWELL T6360,venta_refaccion,venta_refaccion
+TARJETA ELECTRONICA PRINCIPAL DAIKIN RZQ,venta_refaccion,venta_refaccion
+SENSOR DE TEMPERATURA NTC 10K PARA MANEJADORA,venta_refaccion,venta_refaccion
+BANDA PARA MOTOR DE MANEJADORA TRANE 3X440,venta_refaccion,venta_refaccion
+REFRIGERANTE R22 CILINDRO 30 LB,venta_refaccion,venta_refaccion
+REFRIGERANTE R410A CILINDRO 25 LB,venta_refaccion,venta_refaccion
+RODAMIENTO 6205 2Z PARA MOTOR VENTILADOR,venta_refaccion,venta_refaccion
+BOMBA DE AGUA PARA CHILLER CENTRIFUGO,venta_refaccion,venta_refaccion
+REPUESTO VALVULA SOLENOIDE 24V PARA UNIDAD CONDENSADORA,venta_refaccion,venta_refaccion
+REFACCION TARJETA INVERSORA MITSUBISHI HEAVY,venta_refaccion,venta_refaccion
+COMPRESOR SCROLL COPELAND ZP54K5E TFD PARA EQUIPO 5T,venta_refaccion,venta_refaccion
+EVAPORADOR RIEL PARA CAMARA DE REFRIGERACION,venta_refaccion,venta_refaccion
+CONDENSADOR TUBOS Y ALETAS CARRIER 5 TONELADAS,venta_refaccion,venta_refaccion
+PIEZA PRESOSTATO DE ALTA Y BAJA PRESION UNIVERSAL,venta_refaccion,venta_refaccion
+CAPACITACION AL PERSONAL TECNICO EN USO DE EQUIPOS HVAC,otro,otro
+ASESORIA TECNICA PARA PROYECTO DE CLIMATIZACION,otro,venta_refaccion
+ELABORACION DE PLANOS Y MEMORIAS DE CALCULO,otro,otro
+VISITA TECNICA Y LEVANTAMIENTO DE INFORMACION,otro,otro
+TRANSPORTE Y FLETE DE EQUIPOS A SUCURSAL,otro,otro
+RENTA DE ANDAMIO PARA TRABAJOS EN ALTURA,otro,venta_refaccion
+ELABORACION DE PROYECTO EJECUTIVO HVAC,otro,otro
+MANO DE OBRA GENERAL EN INSTALACION,instalacion_nueva,instalacion_nueva

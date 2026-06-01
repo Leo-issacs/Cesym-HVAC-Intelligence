@@ -1,0 +1,34 @@
+# Entorno virtual
+cesym_data_analytics/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# Datos generados (se recrean con el pipeline)
+data/db/
+data/processed/*.csv
+data/processed/*.png
+# Excepción: dataset de etiquetas curado manualmente (no es un output del pipeline)
+!data/processed/conceptos_clasificados.csv
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Variables de entorno
+.env
+*.env.local
