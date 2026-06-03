@@ -22,7 +22,7 @@ Uso:
 """
 
 import pathlib
-import sqlite3
+import sys
 import warnings
 
 import matplotlib.pyplot as plt
@@ -38,7 +38,11 @@ warnings.filterwarnings("ignore")
 # .resolve() → ruta absoluta sin '..'
 # .parent.parent.parent → sube tres niveles hasta la raíz del proyecto
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
-DB_PATH = ROOT / "data" / "db" / "hvac.db"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.db import engine, is_postgres, SQLITE_DB_PATH  # noqa: E402
+
 PROCESSED = ROOT / "data" / "processed"
 CHART_PATH = PROCESSED / "forecast_flujo_caja.png"
 CSV_PATH = PROCESSED / "forecast_resultados.csv"
@@ -61,24 +65,19 @@ def cargar_ingresos_mensuales() -> pd.Series:
     Devuelve una pd.Series con índice PeriodIndex mensual (M) y valores
     de suma de 'total'.
     """
-    if not DB_PATH.exists():
+    if not is_postgres and not SQLITE_DB_PATH.exists():
         raise FileNotFoundError(
-            f"No se encontró la base de datos en:\n  {DB_PATH}\n"
+            f"No se encontró la base de datos en:\n  {SQLITE_DB_PATH}\n"
             "Ejecuta primero: python -X utf8 scripts/cargar_bd.py --limpiar"
         )
 
-    con = sqlite3.connect(DB_PATH)
-    try:
-        # SQL: seleccionamos solo facturas cobradas (fecha_pago IS NOT NULL)
-        query = """
-            SELECT fecha_pago, total
-            FROM   facturas
-            WHERE  fecha_pago IS NOT NULL
-              AND  total      IS NOT NULL
-        """
-        df = pd.read_sql_query(query, con, parse_dates=["fecha_pago"])
-    finally:
-        con.close()
+    query = """
+        SELECT fecha_pago, total
+        FROM   facturas
+        WHERE  fecha_pago IS NOT NULL
+          AND  total      IS NOT NULL
+    """
+    df = pd.read_sql(query, engine, parse_dates=["fecha_pago"])
 
     # Crear columna de período mensual (e.g. '2025-11') para agrupar
     df["mes"] = df["fecha_pago"].dt.to_period("M")

@@ -13,15 +13,18 @@ Limpieza que aplica:
 Uso como módulo: from src.etl.load_facturas import run
 """
 
+import sys
 import pathlib
 import pandas as pd
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 
-# Raíz del proyecto: subimos 2 niveles desde src/etl/
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-RAW_DIR = ROOT / "data" / "raw"
-DB_PATH = ROOT / "data" / "db" / "hvac.db"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
+from src.db import engine, is_postgres, SQLITE_DB_PATH  # noqa: E402
+
+RAW_DIR = ROOT / "data" / "raw"
 ARCHIVO_FACTURAS = RAW_DIR / "reporteMensual_FACTURAS.xlsx"
 
 
@@ -119,16 +122,17 @@ def cargar_en_db(df: pd.DataFrame, engine, limpiar: bool = False) -> None:
 
 
 def run(limpiar: bool = False) -> None:
-    """Ejecuta el ETL completo: Excel → SQLite."""
+    """Ejecuta el ETL completo: Excel → base de datos."""
     print(f"Leyendo {ARCHIVO_FACTURAS.name} ...")
     df = extraer_facturas()
     print(f"  {len(df)} filas válidas tras limpieza")
     print(f"  {df['cliente'].nunique()} clientes únicos")
     print(f"  {df['pagada'].sum()} facturas pagadas / {(df['pagada'] == 0).sum()} pendientes")
 
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    engine = create_engine(f"sqlite:///{DB_PATH}")
+    if not is_postgres:
+        SQLITE_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-    print(f"\nCargando en {DB_PATH.relative_to(ROOT)} ...")
+    db_label = "PostgreSQL · analytics" if is_postgres else str(SQLITE_DB_PATH.relative_to(ROOT))
+    print(f"\nCargando en {db_label} ...")
     cargar_en_db(df, engine, limpiar=limpiar)
     print("ETL completado.\n")

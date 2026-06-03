@@ -26,12 +26,41 @@ pip install -r requirements.txt
 
 The venv folder is local — do not commit it to git.
 
+## Database Configuration
+
+The database connection is centralized in `src/db.py`. It reads `DATABASE_URL` from `.env`:
+
+- **SQLite (default):** leave `DATABASE_URL` unset → uses `data/db/hvac.db` automatically.
+- **PostgreSQL:** set `DATABASE_URL=postgresql+psycopg2://user:pass@host:5432/dbname` → all tables go to the `analytics` schema (set via `search_path` on every connection).
+
+Copy `.env.example` to `.env` and fill in your values.
+
+### Schema migrations (Alembic)
+
+```powershell
+# Generate SQL preview (offline, no real DB needed)
+alembic upgrade head --sql
+
+# Apply migrations to PostgreSQL (requires DATABASE_URL set)
+alembic upgrade head
+
+# Rollback
+alembic downgrade -1
+```
+
+### Data migration SQLite → PostgreSQL
+
+```powershell
+# After running alembic upgrade head:
+python -X utf8 scripts/migrate_sqlite_to_postgres.py
+```
+
 ## Running the Pipeline
 
 Always use `-X utf8` to handle Spanish text in data. Activate the venv first.
 
 ```powershell
-# 1. Populate the database (creates data/db/hvac.db)
+# 1. Populate the database (creates data/db/hvac.db or writes to PostgreSQL)
 python -X utf8 scripts/cargar_bd.py --limpiar   # full reload, drops existing tables
 python -X utf8 scripts/cargar_bd.py             # incremental (replaces tables in place)
 
@@ -57,18 +86,25 @@ data/
     hvac.db                               SQLite database (created by ETL)
 
 src/
+  db.py               Central DB config: reads DATABASE_URL, creates SQLAlchemy engine
   etl/
-    load_facturas.py    Cleans and loads reporteMensual_FACTURAS.xlsx → table `facturas`
+    load_facturas.py  Cleans and loads reporteMensual_FACTURAS.xlsx → table `facturas`
   models/
-    client_score.py     Reads `facturas`, computes 3 scores, writes `scores_clientes`
-  agents/               Planned sub-modules: collections, orchestrator, quotes, routes
-  api/                  Not yet implemented
+    client_score.py   Reads `facturas`, computes 3 scores, writes `scores_clientes`
+  agents/             Planned sub-modules: collections, orchestrator, quotes, routes
+  api/                Not yet implemented
   dashboard/
-    app.py              Streamlit dashboard (3 tabs: Resumen, Scores, Forecast)
+    app.py            Streamlit dashboard (3 tabs: Resumen, Scores, Forecast)
 
 scripts/
-  etl.py          Entry point → calls src/etl/load_facturas.run()
-  cargar_bd.py    Entry point with --limpiar flag → calls same ETL
+  etl.py                        Entry point → calls src/etl/load_facturas.run()
+  cargar_bd.py                  Entry point with --limpiar flag → calls same ETL
+  migrate_sqlite_to_postgres.py Copy data from SQLite to PostgreSQL with count verification
+
+alembic/                        Alembic migration setup
+  env.py                        Migration environment (reads DATABASE_URL)
+  versions/
+    001_initial_schema.py       Creates facturas + scores_clientes in analytics schema
 
 notebooks/        Exploratory analysis
 tests/            Test suite

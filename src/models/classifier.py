@@ -18,7 +18,7 @@ Uso como módulo desde otro script:
 
 import pathlib
 import re
-import sqlite3
+import sys
 import unicodedata
 
 import joblib
@@ -31,8 +31,12 @@ from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 # ── Rutas ─────────────────────────────────────────────────────────────────────
-ROOT       = pathlib.Path(__file__).resolve().parent.parent.parent
-DB_PATH    = ROOT / "data" / "db"    / "hvac.db"
+ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.db import engine, is_postgres, SQLITE_DB_PATH  # noqa: E402
+
 LABELS_CSV = ROOT / "data" / "processed" / "conceptos_clasificados.csv"
 MODEL_PATH = ROOT / "data" / "processed" / "modelo_clasificador.joblib"
 OUTPUT_CSV = ROOT / "data" / "processed" / "facturas_clasificadas.csv"
@@ -284,18 +288,16 @@ def clasificar_facturas(pipeline: Pipeline) -> pd.DataFrame:
     El CSV de salida incluye la categoría predicha y la confianza para cada
     factura, listo para ser consumido por el dashboard o agentes de cobranza.
     """
-    if not DB_PATH.exists():
+    if not is_postgres and not SQLITE_DB_PATH.exists():
         raise FileNotFoundError(
-            f"No se encontró la base de datos en {DB_PATH}\n"
+            f"No se encontró la base de datos en {SQLITE_DB_PATH}\n"
             "Ejecuta primero: python -X utf8 scripts/cargar_bd.py --limpiar"
         )
 
-    con = sqlite3.connect(DB_PATH)
-    df  = pd.read_sql_query(
+    df = pd.read_sql(
         "SELECT folio, cliente, fecha_factura, concepto, total, pagada FROM facturas",
-        con,
+        engine,
     )
-    con.close()
 
     print(f"Clasificando {len(df)} facturas...")
     textos_norm = [normalizar(c) for c in df["concepto"]]

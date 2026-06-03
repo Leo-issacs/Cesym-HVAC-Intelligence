@@ -25,15 +25,13 @@ from datetime import date
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
-from sqlalchemy import create_engine
 
-# ── Rutas absolutas usando pathlib ────────────────────────────────────────────
-# __file__ = src/models/client_score.py
-# .parents[0] = src/models/
-# .parents[1] = src/
-# .parents[2] = raíz del proyecto
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-DB_PATH = ROOT / "data" / "db" / "hvac.db"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.db import engine, is_postgres, SQLITE_DB_PATH  # noqa: E402
+
 CSV_OUT = ROOT / "data" / "processed" / "scores_clientes.csv"
 
 
@@ -211,7 +209,8 @@ def guardar_resultados(features: pd.DataFrame, scores: pd.DataFrame, engine) -> 
     # if_exists="replace" recrea la tabla cada vez que corre el scoring.
     # Esto garantiza que siempre refleja los datos más recientes.
     tabla.to_sql("scores_clientes", engine, if_exists="replace", index=False)
-    print(f"  ✓ Tabla 'scores_clientes' guardada en {DB_PATH.name}")
+    db_label = "PostgreSQL · analytics" if is_postgres else SQLITE_DB_PATH.name
+    print(f"  ✓ Tabla 'scores_clientes' guardada en {db_label}")
 
     # ── CSV ───────────────────────────────────────────────────────────────────
     CSV_OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -260,12 +259,10 @@ def imprimir_top10(tabla: pd.DataFrame) -> None:
 
 def run() -> None:
     """Orquesta el pipeline completo de scoring."""
-    if not DB_PATH.exists():
-        print(f"ERROR: No se encontró la base de datos en:\n  {DB_PATH}")
+    if not is_postgres and not SQLITE_DB_PATH.exists():
+        print(f"ERROR: No se encontró la base de datos en:\n  {SQLITE_DB_PATH}")
         print("Ejecuta primero: python -X utf8 scripts/etl.py")
         sys.exit(1)
-
-    engine = create_engine(f"sqlite:///{DB_PATH}")
 
     print("\n[1/4] Cargando facturas desde la DB...")
     facturas = cargar_facturas(engine)
