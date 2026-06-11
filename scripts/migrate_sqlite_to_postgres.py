@@ -1,11 +1,26 @@
 """
 Migración de datos: SQLite → PostgreSQL.
 
-Lee todos los datos del SQLite actual y los inserta en PostgreSQL.
-Imprime conteos de origen vs destino para verificación.
+╔══════════════════════════════════════════════════════════════════════════╗
+║  ⚠  DEPRECADO — NO usar contra el Postgres de producción.                  ║
+║                                                                            ║
+║  Este script copia con df.to_sql(if_exists="replace"), que hace           ║
+║  DROP + CREATE de la tabla destino. Desde la migración 002, analytics.     ║
+║  facturas tiene PRIMARY KEY(folio), NOT NULL y tipos DATE/INTEGER. Un      ║
+║  "replace" DROPEARÍA esas constraints y las recrearía con los tipos que    ║
+║  pandas infiere (sin PK, fechas como timestamp, dias_pago como float),     ║
+║  reintroduciendo exactamente el drift que 002 vino a corregir.             ║
+║                                                                            ║
+║  Sólo tenía sentido como seed único ANTES de existir datos/constraints en  ║
+║  Postgres. Hoy el flujo correcto es: alembic upgrade head + el ETL         ║
+║  (swap transaccional que respeta el schema).                               ║
+║                                                                            ║
+║  Si de verdad necesitas correrlo (p.ej. re-seed de un Postgres vacío),     ║
+║  pásale --forzar y asume que destruye el schema destino.                   ║
+╚══════════════════════════════════════════════════════════════════════════╝
 
-Uso:
-    python -X utf8 scripts/migrate_sqlite_to_postgres.py
+Uso (sólo con confirmación explícita):
+    python -X utf8 scripts/migrate_sqlite_to_postgres.py --forzar
 
 Prerrequisitos:
     1. DATABASE_URL en .env debe apuntar a PostgreSQL.
@@ -123,5 +138,25 @@ def migrate():
     print(sep)
 
 
+def _guard_forzar() -> None:
+    """Exige --forzar para ejecutar; si no, advierte y sale con código != 0."""
+    if "--forzar" in sys.argv:
+        print("⚠  --forzar recibido: se ejecutará el copiado DESTRUCTIVO "
+              "(if_exists='replace'). Esto dropea constraints/tipos del destino.\n")
+        return
+    print(
+        "\n⚠  SCRIPT DEPRECADO Y BLOQUEADO.\n"
+        "   Usa df.to_sql(if_exists='replace'), que DROPEA la tabla destino y\n"
+        "   destruiría la PRIMARY KEY / NOT NULL / tipos DATE-INTEGER que la\n"
+        "   migración 002 agregó a analytics.facturas.\n\n"
+        "   Flujo correcto:  alembic upgrade head  +  el ETL (swap transaccional).\n\n"
+        "   Si realmente necesitas re-sembrar un Postgres vacío y aceptas que\n"
+        "   esto destruye el schema destino, vuelve a correrlo con:\n"
+        "       python -X utf8 scripts/migrate_sqlite_to_postgres.py --forzar\n"
+    )
+    sys.exit(1)
+
+
 if __name__ == "__main__":
+    _guard_forzar()
     migrate()
