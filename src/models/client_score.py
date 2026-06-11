@@ -30,9 +30,20 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.db import engine, is_postgres, SQLITE_DB_PATH  # noqa: E402
+from src.db import (  # noqa: E402
+    engine,
+    is_postgres,
+    SQLITE_DB_PATH,
+    ValidacionError,
+    conteo_filas,
+    swap_tabla,
+)
 
 CSV_OUT = ROOT / "data" / "processed" / "scores_clientes.csv"
+
+# Si el lote nuevo trae menos de este % de los clientes actuales, lo tratamos
+# como sospecha de datos corruptos y abortamos sin tocar la tabla.
+UMBRAL_CAIDA_VOLUMEN = 0.9
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -187,9 +198,49 @@ def calcular_scores(features: pd.DataFrame) -> pd.DataFrame:
 # PASO 4 — Persistencia
 # ═════════════════════════════════════════════════════════════════════════════
 
+def validar_scores(df: pd.DataFrame, conteo_actual: int = 0) -> list[str]:
+    """
+    Devuelve la lista de problemas que impiden escribir `df` en `scores_clientes`.
+
+    Lista vacía = seguro de cargar. La clave lógica es `cliente` (una fila por
+    cliente), así que las guardas son análogas a las de facturas:
+      - DataFrame vacío.
+      - Caída de volumen: < 90% de los clientes actuales.
+      - `cliente` nulo (rompe la clave lógica).
+      - Clientes duplicados (debería haber exactamente una fila por cliente).
+    """
+    problemas: list[str] = []
+    n = len(df)
+
+    if n == 0:
+        problemas.append("El DataFrame de scores está vacío.")
+
+    if conteo_actual and n < UMBRAL_CAIDA_VOLUMEN * conteo_actual:
+        umbral = UMBRAL_CAIDA_VOLUMEN * conteo_actual
+        problemas.append(
+            f"Caída de volumen sospechosa: {n} clientes nuevos < 90% de los "
+            f"{conteo_actual} actuales (umbral {umbral:.0f})."
+        )
+
+    if df["cliente"].isna().any():
+        problemas.append("Hay filas con 'cliente' nulo (es la clave lógica).")
+
+    clientes = df["cliente"].dropna()
+    if clientes.duplicated().any():
+        dups = sorted(clientes[clientes.duplicated(keep=False)].unique().tolist())
+        problemas.append(f"Clientes duplicados: {dups}")
+
+    return problemas
+
+
 def guardar_resultados(features: pd.DataFrame, scores: pd.DataFrame, engine) -> None:
     """
-    Une features y scores, guarda en la DB y exporta un CSV.
+    Une features y scores, valida, guarda en la DB y exporta un CSV.
+
+    Escritura con el mismo patrón seguro que el ETL: validar → DELETE+INSERT en
+    una transacción (swap_tabla), preservando el schema. Si la validación falla,
+    lanza ValidacionError y NO toca la tabla ni el CSV (se conserva el último
+    resultado bueno).
 
     El CSV usa encoding "utf-8-sig" (UTF-8 con BOM) para que Excel en Windows
     lo abra directamente sin problemas con caracteres especiales en español.
@@ -205,17 +256,24 @@ def guardar_resultados(features: pd.DataFrame, scores: pd.DataFrame, engine) -> 
         "fecha_calculo",
     ]]
 
-    # ── SQLite ────────────────────────────────────────────────────────────────
-    # if_exists="replace" recrea la tabla cada vez que corre el scoring.
-    # Esto garantiza que siempre refleja los datos más recientes.
-    tabla.to_sql("scores_clientes", engine, if_exists="replace", index=False)
+    # ── DB: validar + swap transaccional ──────────────────────────────────────
+    conteo_actual = conteo_filas(engine, "scores_clientes")
+    problemas = validar_scores(tabla, conteo_actual or 0)
+    if problemas:
+        raise ValidacionError("scores_clientes", problemas)
+
+    swap_tabla(engine, "scores_clientes", tabla, existe=conteo_actual is not None)
     db_label = "PostgreSQL · analytics" if is_postgres else SQLITE_DB_PATH.name
-    print(f"  ✓ Tabla 'scores_clientes' guardada en {db_label}")
+    print(f"  ✓ Tabla 'scores_clientes' guardada en {db_label} (swap transaccional)")
 
     # ── CSV ───────────────────────────────────────────────────────────────────
     CSV_OUT.parent.mkdir(parents=True, exist_ok=True)
     tabla.to_csv(CSV_OUT, index=False, encoding="utf-8-sig")
-    print(f"  ✓ CSV exportado → {CSV_OUT.relative_to(ROOT)}")
+    try:
+        csv_label = CSV_OUT.relative_to(ROOT)
+    except ValueError:
+        csv_label = CSV_OUT  # CSV_OUT fuera del repo (p.ej. en pruebas)
+    print(f"  ✓ CSV exportado → {csv_label}")
 
     return tabla
 
@@ -281,7 +339,12 @@ def run() -> None:
     scores = calcular_scores(features)
 
     print("\n[4/4] Guardando resultados...")
-    tabla = guardar_resultados(features, scores, engine)
+    try:
+        tabla = guardar_resultados(features, scores, engine)
+    except ValidacionError as e:
+        print("\n✗ VALIDACIÓN FALLIDA — scoring abortado. La tabla 'scores_clientes' quedó intacta.")
+        print(e)
+        sys.exit(1)
 
     imprimir_top10(tabla)
     print("Scoring completado.")
