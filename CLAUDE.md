@@ -92,9 +92,10 @@ All read from `.env` (loaded via `python-dotenv`) or the system environment.
 |---|---|---|
 | `DATABASE_URL` | `src/db.py`, `alembic/env.py`, `scripts/migrate_sqlite_to_postgres.py` | Connection string. Unset → SQLite fallback (`data/db/hvac.db`). `postgresql+psycopg2://...` → Postgres, `analytics` schema. In `.env.example` this is the Supabase **pooler** URL (port 6543). |
 | `DATABASE_MIGRATION_URL` | `alembic/env.py` (DDL), `scripts/backup_postgres.ps1` | Direct connection (port 5432) — used for migrations and `pg_dump`. The pooler (6543) is not suitable for DDL/dumps. |
-| `DRIVE_FOLDER_ID` | `scripts/sync_drive.py`, `scripts/drive_upload.py` (fallback) | ID of the shared Google Drive folder to pull the Excel files from. |
-| `DRIVE_BACKUP_FOLDER_ID` | `scripts/drive_upload.py` | ID of a **Shared Drive** folder for Postgres backups. Required for offsite upload (a Service Account has no storage quota on My Drive — see `docs/runbooks/restore.md` §6). |
+| `DRIVE_FOLDER_ID` | `scripts/sync_drive.py` | ID of the shared Google Drive folder to pull the Excel files from. |
 | `DRIVE_CREDENTIALS_PATH` | `scripts/sync_drive.py` | Path to the Service Account JSON (default `credentials/service_account.json`). |
+| `SUPABASE_URL` | `scripts/supabase_backup.py` | `https://<project-ref>.supabase.co` — Storage API endpoint for offsite backups. |
+| `SUPABASE_SERVICE_KEY` | `scripts/supabase_backup.py` | service_role key (secret). Uploads dumps to the private `backups` bucket and prunes old ones. |
 
 Run `setup_google_cloud.ps1` (after `gcloud auth login`) to provision the GCP
 project + Service Account and auto-write the Drive variables into `.env`.

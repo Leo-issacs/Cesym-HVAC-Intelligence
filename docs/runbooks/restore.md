@@ -19,7 +19,8 @@ sin improvisar.
 | **Conexión** | `DATABASE_MIGRATION_URL` = conexión **DIRECTA** (puerto 5432), nunca el pooler (6543) |
 | **Local** | `backups/cesym_pg_backup_YYYY-MM-DD_HHmmss.dump` (gitignored) |
 | **Retención local** | 30 días (los dumps más viejos se borran solos) |
-| **Offsite** | Google Drive (best-effort — ver §6) |
+| **Offsite** | Supabase Storage, bucket privado `backups` (best-effort — ver §6) |
+| **Retención offsite** | 30 días (la aplica `supabase_backup.py` en el bucket) |
 | **Disparo** | `scripts/sync_maestro.ps1`, paso `[1/3]`, lunes 7 AM, **antes** del ETL |
 
 El script: `scripts/backup_postgres.ps1`. La verificación: `scripts/test_restore.ps1`.
@@ -139,43 +140,66 @@ agrega `--clean` (que dropea objetos antes de recrearlos — **destructivo**).
 
 ---
 
-## 6. Offsite en Google Drive — setup obligatorio (Shared Drive)
+## 6. Offsite en Supabase Storage (bucket privado `backups`)
 
-La subida reusa la **Service Account** (`credentials/service_account.json`, mismo
-patrón que `sync_drive.py`) con scope `drive.file`. Hay un detalle crítico:
+La copia offsite va a **Supabase Storage**, al bucket **privado** `backups`, vía
+`scripts/supabase_backup.py` (Storage REST API con la `service_role` key). En una
+sola corrida: asegura el bucket → sube el dump → aplica retención de 30 días en el
+bucket. Es best-effort: si falla, el backup **local** (la red de seguridad
+principal) igual quedó.
 
-> Una Service Account **no tiene almacenamiento propio**. Si la carpeta destino
-> está en "Mi unidad" de un usuario, Google rechaza la subida con
-> `storageQuotaExceeded`.
+> **Probado el 2026-06-12**: bucket privado `backups` creado, subida del dump
+> (36 KB) OK, y retención verificada (subir un dump con fecha vieja → la purga lo
+> borró, dejando solo el vigente).
 
-**Solución (una vez):**
+**Setup (una vez):** en `.env`
 
-1. Crea una **Unidad compartida** (Shared Drive) en Google Drive.
-2. Agrégale la Service Account como miembro con permiso de **Administrador de
-   contenido** (o Colaborador).
-3. Crea dentro una carpeta para los backups y copia su **ID**.
-4. Ponlo en `.env`:
+```
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_SERVICE_KEY=<service_role key>   # Dashboard > Settings > API
+```
 
-   ```
-   DRIVE_BACKUP_FOLDER_ID=<id_de_la_carpeta_en_la_shared_drive>
-   ```
-
-Sin esto, el backup **local** sigue funcionando (es la red de seguridad
-principal); solo falta la copia offsite. `drive_upload.py` usa
-`supportsAllDrives=True`, así que funcionará en cuanto el destino sea una Shared
-Drive. Alternativa: OAuth con delegación de dominio (Workspace).
+- `<project-ref>` es el subdominio del host directo de `DATABASE_MIGRATION_URL`
+  (`db.<project-ref>.supabase.co`).
+- La `service_role` key es **secreta** (salta RLS): solo en el `.env` del
+  servidor, nunca en código cliente ni en el repo.
 
 Subida manual de un archivo:
 
 ```powershell
-.\cesym_data_analytics\Scripts\python.exe -X utf8 scripts\drive_upload.py backups\<dump>
+.\cesym_data_analytics\Scripts\python.exe -X utf8 scripts\supabase_backup.py backups\<dump>
 ```
+
+### Descargar un backup del bucket (camino offsite para restaurar)
+
+Si el dump local se perdió, baja el del bucket antes de restaurar (§5):
+
+```powershell
+$U   = $env:SUPABASE_URL
+$KEY = $env:SUPABASE_SERVICE_KEY
+$name = "cesym_pg_backup_2026-06-11_184536.dump"
+
+# Listar lo que hay en el bucket:
+curl.exe -s -X POST "$U/storage/v1/object/list/backups" `
+  -H "apikey: $KEY" -H "Authorization: Bearer $KEY" `
+  -H "Content-Type: application/json" `
+  -d '{"prefix":"","limit":1000,"sortBy":{"column":"name","order":"desc"}}'
+
+# Descargar uno a backups\:
+curl.exe -s -X GET "$U/storage/v1/object/backups/$name" `
+  -H "apikey: $KEY" -H "Authorization: Bearer $KEY" `
+  -o "backups\$name"
+```
+
+Luego verifica con `test_restore.ps1 -DumpFile backups\$name` y procede con §5.
+
+> Alternativa GUI: Dashboard de Supabase > Storage > bucket `backups` > descargar.
 
 ---
 
 ## 7. Checklist de restauración (imprimir/seguir)
 
-- [ ] Identifica el backup bueno (local `backups/` o Drive).
+- [ ] Identifica el backup bueno (local `backups/` o el bucket de Supabase Storage).
 - [ ] `test_restore.ps1 -DumpFile <dump>` → **PASS**.
 - [ ] Aparta el schema dañado (`ALTER SCHEMA ... RENAME`).
 - [ ] `CREATE SCHEMA` + `pg_restore --schema=...`.

@@ -1,7 +1,8 @@
 # backup_postgres.ps1
 # Backup de los schemas de produccion (analytics + chatbot) ANTES de cualquier
 # escritura. pg_dump en formato custom (-Fc) via la conexion DIRECTA (5432),
-# archivo fechado, subida best-effort a Google Drive y retencion local de 30 dias.
+# archivo fechado, subida best-effort a Supabase Storage (bucket privado
+# "backups") y retencion local de 30 dias (la del bucket la hace supabase_backup.py).
 #
 # NOTA: archivo en ASCII puro a proposito. Windows PowerShell 5.1 lee los .ps1
 # sin BOM como ANSI (CP1252); acentos, em-dash y flechas se decodifican como
@@ -9,9 +10,9 @@
 #
 # USO:
 #   .\scripts\backup_postgres.ps1
-#   .\scripts\backup_postgres.ps1 -SkipUpload      # solo dump local, sin Drive
+#   .\scripts\backup_postgres.ps1 -SkipUpload      # solo dump local, sin offsite
 #
-# Exit codes: 0 = dump local OK (la subida a Drive es best-effort y no aborta).
+# Exit codes: 0 = dump local OK (la subida offsite es best-effort y no aborta).
 #             1 = pg_dump no encontrado, o el dump fallo (NO continuar con writes).
 
 param(
@@ -127,20 +128,20 @@ if ($pgRestore) {
 $sizeKb = [math]::Round((Get-Item $outFile).Length / 1KB, 1)
 Write-Host "  OK  dump valido: $outFile  ($sizeKb KB)" -ForegroundColor Green
 
-# -- Subida a Drive (best-effort: no aborta el backup local) -------------------
+# -- Subida a Supabase Storage (best-effort: no aborta el backup local) --------
 if (-not $SkipUpload) {
     if (Test-Path $VENV_PY) {
-        Write-Host "`nSubiendo a Google Drive..." -ForegroundColor Yellow
-        & $VENV_PY -X utf8 (Join-Path $ROOT "scripts\drive_upload.py") $outFile
+        Write-Host "`nSubiendo a Supabase Storage (bucket 'backups')..." -ForegroundColor Yellow
+        & $VENV_PY -X utf8 (Join-Path $ROOT "scripts\supabase_backup.py") $outFile
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "  AVISO: la subida a Drive fallo. El backup LOCAL si se creo." -ForegroundColor DarkYellow
-            Write-Host "         Revisa scripts/drive_upload.py y docs/runbooks/restore.md." -ForegroundColor DarkYellow
+            Write-Host "  AVISO: la subida offsite fallo. El backup LOCAL si se creo." -ForegroundColor DarkYellow
+            Write-Host "         Revisa SUPABASE_URL / SUPABASE_SERVICE_KEY en .env y docs/runbooks/restore.md." -ForegroundColor DarkYellow
         }
     } else {
-        Write-Host "  AVISO: venv no encontrado ($VENV_PY); se omite la subida a Drive." -ForegroundColor DarkYellow
+        Write-Host "  AVISO: venv no encontrado ($VENV_PY); se omite la subida offsite." -ForegroundColor DarkYellow
     }
 } else {
-    Write-Host "`n(-SkipUpload) Subida a Drive omitida." -ForegroundColor DarkGray
+    Write-Host "`n(-SkipUpload) Subida offsite omitida." -ForegroundColor DarkGray
 }
 
 # -- Retencion local: borrar dumps con mas de 30 dias --------------------------
