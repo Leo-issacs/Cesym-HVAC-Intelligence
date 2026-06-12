@@ -36,6 +36,9 @@ Reverse-engineered documentation of the system as it actually exists:
   into multiple PRs.
 - **Tests in the same PR:** any behavior change ships with its tests in the same
   PR (`tests/`). Don't defer tests to a follow-up.
+- **Green CI required to merge:** the `tests` GitHub Actions workflow
+  (`.github/workflows/tests.yml`) runs the suite on every push and PR. **Never
+  merge a PR while CI is red** — fix the failure first.
 - **UTF-8 always:** run every script with `python -X utf8` — the data is full of
   Spanish text and accents.
 - **Never edit `data/raw/`** by hand; it is the source of truth from Drive.

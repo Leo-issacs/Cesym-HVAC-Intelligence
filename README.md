@@ -1,5 +1,7 @@
 # Cesym HVAC Intelligence
 
+[![tests](https://github.com/Leo-issacs/Cesym-HVAC-Intelligence/actions/workflows/tests.yml/badge.svg)](https://github.com/Leo-issacs/Cesym-HVAC-Intelligence/actions/workflows/tests.yml)
+
 Sistema de inteligencia de datos para una empresa de servicios de climatización (HVAC). Transforma datos operativos crudos en Excel en un pipeline completo de analítica e IA: desde la ingestión y limpieza hasta modelos predictivos y un dashboard interactivo.
 
 ---
