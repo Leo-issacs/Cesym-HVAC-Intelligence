@@ -42,6 +42,25 @@ Reverse-engineered documentation of the system as it actually exists:
 - **Don't commit** the venv (`cesym_data_analytics/`), `.env`, or
   `credentials/service_account.json`.
 
+## Production safety (DDL & structural writes)
+
+**Hard rule — no exceptions:** never apply DDL or structural writes to the
+production database (migrations, `ALTER`/`DROP`, bulk reloads, `to_sql` replaces)
+**without both**:
+
+1. **A same-day backup** of production. Run it first and confirm it succeeded:
+   ```powershell
+   .\scripts\backup_postgres.ps1            # pg_dump -Fc of analytics + chatbot
+   .\scripts\test_restore.ps1               # verify the dump actually restores
+   ```
+2. **The change merged** to the main branch (reviewed), not applied from a local
+   working branch.
+
+The Monday 7 AM job (`scripts/sync_maestro.ps1`) already backs up **before** any
+ETL, so there is always a restore point predating any write. Restore procedure:
+`docs/runbooks/restore.md`. This rule exists because DDL was once applied to prod
+without a backup — that must not happen again.
+
 ## Virtual Environment
 
 The project uses a virtual environment named `cesym_data_analytics` (Cesym Data Analytics).
@@ -72,8 +91,9 @@ All read from `.env` (loaded via `python-dotenv`) or the system environment.
 | Variable | Used by | Purpose |
 |---|---|---|
 | `DATABASE_URL` | `src/db.py`, `alembic/env.py`, `scripts/migrate_sqlite_to_postgres.py` | Connection string. Unset → SQLite fallback (`data/db/hvac.db`). `postgresql+psycopg2://...` → Postgres, `analytics` schema. In `.env.example` this is the Supabase **pooler** URL (port 6543). |
-| `DATABASE_MIGRATION_URL` | *(declared in `.env.example` only)* | Direct connection (port 5432) "for migrations". **Note:** no code reads it today — `migrate_sqlite_to_postgres.py` actually uses `DATABASE_URL`. See `docs/ARCHITECTURE.md` §5.4. |
-| `DRIVE_FOLDER_ID` | `scripts/sync_drive.py` | ID of the shared Google Drive folder to pull the Excel files from. |
+| `DATABASE_MIGRATION_URL` | `alembic/env.py` (DDL), `scripts/backup_postgres.ps1` | Direct connection (port 5432) — used for migrations and `pg_dump`. The pooler (6543) is not suitable for DDL/dumps. |
+| `DRIVE_FOLDER_ID` | `scripts/sync_drive.py`, `scripts/drive_upload.py` (fallback) | ID of the shared Google Drive folder to pull the Excel files from. |
+| `DRIVE_BACKUP_FOLDER_ID` | `scripts/drive_upload.py` | ID of a **Shared Drive** folder for Postgres backups. Required for offsite upload (a Service Account has no storage quota on My Drive — see `docs/runbooks/restore.md` §6). |
 | `DRIVE_CREDENTIALS_PATH` | `scripts/sync_drive.py` | Path to the Service Account JSON (default `credentials/service_account.json`). |
 
 Run `setup_google_cloud.ps1` (after `gcloud auth login`) to provision the GCP
