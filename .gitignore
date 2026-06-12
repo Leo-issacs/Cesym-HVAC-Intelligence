@@ -51,3 +51,7 @@ credentials/*.p12
 
 # Logs generados
 logs/
+
+# Backups de Postgres (datos de producción — NUNCA subir al repo)
+backups/
+*.dump
