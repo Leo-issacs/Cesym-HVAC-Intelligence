@@ -1,3 +1,4 @@
+import os
 import pathlib
 import sys
 from logging.config import fileConfig
@@ -10,7 +11,14 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.db import DATABASE_URL, is_postgres  # noqa: E402
+from src.db import DATABASE_URL  # noqa: E402
+
+# Para el DDL usamos la conexión DIRECTA (5432) cuando está disponible: el pooler
+# de Supabase (transaction mode, 6543) no es apto para migraciones. Antes
+# DATABASE_MIGRATION_URL estaba declarada en .env pero ningún código la usaba
+# (ver docs/ARCHITECTURE.md §5.4); aquí sí se usa. Si no está, cae a DATABASE_URL.
+MIGRATION_URL = os.getenv("DATABASE_MIGRATION_URL") or DATABASE_URL
+is_postgres = MIGRATION_URL.startswith("postgresql")
 
 config = context.config
 # Nota: NO usamos config.set_main_option("sqlalchemy.url", ...) porque ConfigParser
@@ -26,7 +34,7 @@ _SCHEMA = "analytics" if is_postgres else None
 
 def run_migrations_offline() -> None:
     context.configure(
-        url=DATABASE_URL,
+        url=MIGRATION_URL,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -38,7 +46,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    eng = create_engine(DATABASE_URL, poolclass=pool.NullPool)
+    eng = create_engine(MIGRATION_URL, poolclass=pool.NullPool)
 
     if is_postgres:
         @event.listens_for(eng, "connect")
