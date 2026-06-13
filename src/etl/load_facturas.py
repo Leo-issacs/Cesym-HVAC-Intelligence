@@ -16,16 +16,26 @@ Uso como módulo: from src.etl.load_facturas import run
 import sys
 import pathlib
 import pandas as pd
-from sqlalchemy import text
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.db import engine, is_postgres, SQLITE_DB_PATH  # noqa: E402
+from src.db import (  # noqa: E402
+    engine,
+    is_postgres,
+    SQLITE_DB_PATH,
+    ValidacionError,
+    conteo_filas,
+    swap_tabla,
+)
 
 RAW_DIR = ROOT / "data" / "raw"
 ARCHIVO_FACTURAS = RAW_DIR / "reporteMensual_FACTURAS.xlsx"
+
+# Si el lote nuevo trae menos de este % de las filas actuales, lo tratamos como
+# sospecha de Excel corrupto y abortamos sin tocar la tabla.
+UMBRAL_CAIDA_VOLUMEN = 0.9
 
 
 def _parsear_fechas(serie: pd.Series) -> pd.Series:
@@ -100,25 +110,61 @@ def extraer_facturas() -> pd.DataFrame:
     ]]
 
 
+def validar_facturas(df: pd.DataFrame, conteo_actual: int = 0) -> list[str]:
+    """
+    Devuelve la lista de problemas que impiden escribir `df` en `facturas`.
+
+    Lista vacía = el DataFrame es seguro de cargar. Guardas:
+      - DataFrame vacío (nunca sobrescribir datos buenos con nada).
+      - Caída de volumen: < 90% de las filas actuales (Excel corrupto/truncado).
+      - Folios duplicados (el folio identifica la factura; duplicado = corrupción).
+      - fecha_factura sin parsear (NaT) — fecha_pago NaT sí es válida (impagada).
+    """
+    problemas: list[str] = []
+    n = len(df)
+
+    if n == 0:
+        problemas.append("El DataFrame de facturas está vacío.")
+
+    if conteo_actual and n < UMBRAL_CAIDA_VOLUMEN * conteo_actual:
+        umbral = UMBRAL_CAIDA_VOLUMEN * conteo_actual
+        problemas.append(
+            f"Caída de volumen sospechosa: {n} filas nuevas < 90% de las "
+            f"{conteo_actual} actuales (umbral {umbral:.0f})."
+        )
+
+    folios = df["folio"].dropna()
+    if folios.duplicated().any():
+        dups = sorted(folios[folios.duplicated(keep=False)].unique().tolist())
+        problemas.append(f"Folios duplicados: {dups}")
+
+    if df["fecha_factura"].isna().any():
+        n_nat = int(df["fecha_factura"].isna().sum())
+        problemas.append(f"{n_nat} fila(s) con fecha_factura no parseada (NaT).")
+
+    return problemas
+
+
 def cargar_en_db(df: pd.DataFrame, engine, limpiar: bool = False) -> None:
     """
-    Escribe el DataFrame en la tabla `facturas` de SQLite.
+    Valida el DataFrame y, si pasa, reemplaza el contenido de `facturas` con un
+    DELETE+INSERT dentro de una sola transacción (ver src.db.swap_tabla).
 
-    Parameters
-    ----------
-    limpiar : bool
-        Si True, borra la tabla antes de escribir (útil para recargas completas).
-        Si False, reemplaza igualmente (comportamiento de if_exists="replace").
+    Nunca usa if_exists="replace": el schema existente (tipos, PK, constraints)
+    se respeta. Si la validación falla, lanza ValidacionError y NO toca la tabla.
+
+    `limpiar` se conserva por compatibilidad con los entry points; como el swap
+    siempre refresca el total de filas, ya no es necesario dropear la tabla (y
+    dropearla destruiría el schema, justo lo que queremos evitar).
     """
-    if limpiar:
-        with engine.connect() as conn:
-            conn.execute(text("DROP TABLE IF EXISTS facturas"))
-            conn.commit()
+    conteo_actual = conteo_filas(engine, "facturas")
 
-    # to_sql con if_exists="replace" crea la tabla si no existe,
-    # o la reemplaza si ya existe. index=False evita guardar el índice de pandas.
-    df.to_sql("facturas", engine, if_exists="replace", index=False)
-    print(f"  ✓ {len(df)} filas en tabla 'facturas'")
+    problemas = validar_facturas(df, conteo_actual or 0)
+    if problemas:
+        raise ValidacionError("facturas", problemas)
+
+    swap_tabla(engine, "facturas", df, existe=conteo_actual is not None)
+    print(f"  ✓ {len(df)} filas en 'facturas' (swap transaccional, schema intacto)")
 
 
 def run(limpiar: bool = False) -> None:
@@ -134,5 +180,10 @@ def run(limpiar: bool = False) -> None:
 
     db_label = "PostgreSQL · analytics" if is_postgres else str(SQLITE_DB_PATH.relative_to(ROOT))
     print(f"\nCargando en {db_label} ...")
-    cargar_en_db(df, engine, limpiar=limpiar)
+    try:
+        cargar_en_db(df, engine, limpiar=limpiar)
+    except ValidacionError as e:
+        print("\n✗ VALIDACIÓN FALLIDA — ETL abortado. La tabla 'facturas' quedó intacta.")
+        print(e)
+        sys.exit(1)
     print("ETL completado.\n")

@@ -13,7 +13,7 @@ import os
 import pathlib
 
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, inspect, text
 
 load_dotenv()
 
@@ -54,3 +54,63 @@ def _make_engine():
 
 
 engine = _make_engine()
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Escritura segura: validación + swap transaccional
+#
+# Reemplaza el patrón destructivo to_sql(if_exists="replace"), que hacía
+# DROP+CREATE y borraba el schema (tipos, PK, constraints) en cada corrida — y,
+# peor, dejaba la tabla vacía si el Excel de origen venía corrupto. Aquí en su
+# lugar: contar → validar → DELETE+INSERT dentro de UNA transacción, preservando
+# el schema existente. Si algo falla, rollback y la tabla queda intacta.
+#
+# Agnóstico al motor: usa solo SQL estándar (DELETE, COUNT) + to_sql append, así
+# que funciona igual en SQLite y en PostgreSQL/analytics (el search_path lo fija
+# el listener de _make_engine).
+# ═════════════════════════════════════════════════════════════════════════════
+
+
+class ValidacionError(Exception):
+    """Las validaciones previas a la escritura fallaron; la tabla NO se tocó.
+
+    Lleva la lista de problemas detectados para un log claro y un exit code != 0
+    en los entry points (clave para el job desatendido de los lunes).
+    """
+
+    def __init__(self, tabla: str, problemas: list[str]):
+        self.tabla = tabla
+        self.problemas = list(problemas)
+        detalle = "\n".join(f"    - {p}" for p in self.problemas)
+        super().__init__(
+            f"Validación de '{tabla}' falló ({len(self.problemas)} problema(s)); "
+            f"la tabla NO se modificó:\n{detalle}"
+        )
+
+
+def conteo_filas(engine, tabla: str):
+    """Número de filas en `tabla`, o None si la tabla aún no existe.
+
+    None distingue "tabla inexistente" (primera carga) de "tabla vacía"
+    (conteo 0), lo que cambia si el swap debe ejecutar DELETE o solo crear.
+    """
+    if not inspect(engine).has_table(tabla):
+        return None
+    with engine.connect() as conn:
+        return conn.execute(text(f"SELECT COUNT(*) FROM {tabla}")).scalar()
+
+
+def swap_tabla(engine, tabla: str, df, *, existe: bool) -> None:
+    """DELETE + INSERT de `df` en `tabla` dentro de UNA sola transacción.
+
+    Preserva el schema existente (nunca DROP ni if_exists="replace"). Si la tabla
+    no existe (`existe=False`), to_sql append la crea. Cualquier error en el
+    INSERT revierte también el DELETE: la tabla queda como estaba.
+
+    `tabla` es un identificador interno controlado ("facturas"/"scores_clientes"),
+    no entrada de usuario, por eso se interpola directo en el DELETE.
+    """
+    with engine.begin() as conn:
+        if existe:
+            conn.execute(text(f"DELETE FROM {tabla}"))
+        df.to_sql(tabla, conn, if_exists="append", index=False)
