@@ -6,7 +6,7 @@ Para correr:
 """
 
 import pathlib
-import sqlite3
+import sys
 from datetime import date
 
 import numpy as np
@@ -14,9 +14,11 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-# ── Rutas ─────────────────────────────────────────────────────────────────────
-ROOT    = pathlib.Path(__file__).resolve().parents[2]
-DB_PATH = ROOT / "data" / "db" / "hvac.db"
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.db import engine, is_postgres, SQLITE_DB_PATH  # noqa: E402
 
 # ── Config ────────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -160,20 +162,18 @@ h2, h3 { color:var(--color-text) !important; }
 
 @st.cache_data
 def load_facturas() -> pd.DataFrame:
-    with sqlite3.connect(DB_PATH) as con:
-        return pd.read_sql(
-            "SELECT * FROM facturas WHERE total IS NOT NULL", con,
-            parse_dates=["fecha_factura", "fecha_pago"],
-        )
+    return pd.read_sql(
+        "SELECT * FROM facturas WHERE total IS NOT NULL", engine,
+        parse_dates=["fecha_factura", "fecha_pago"],
+    )
 
 @st.cache_data
 def load_scores() -> pd.DataFrame:
-    with sqlite3.connect(DB_PATH) as con:
-        return pd.read_sql("SELECT * FROM scores_clientes", con)
+    return pd.read_sql("SELECT * FROM scores_clientes", engine)
 
-if not DB_PATH.exists():
+if not is_postgres and not SQLITE_DB_PATH.exists():
     st.error(
-        f"Base de datos no encontrada en `{DB_PATH.relative_to(ROOT)}`.\n\n"
+        f"Base de datos no encontrada en `{SQLITE_DB_PATH.relative_to(ROOT)}`.\n\n"
         "Ejecuta primero:\n```\npython -X utf8 scripts/cargar_bd.py --limpiar\n"
         "python -X utf8 src/models/client_score.py\n```"
     )
