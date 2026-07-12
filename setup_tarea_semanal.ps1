@@ -1,7 +1,7 @@
 # setup_tarea_semanal.ps1
 # Registra la tarea semanal. EJECUTAR COMO ADMINISTRADOR.
 
-$PROYECTO = "C:\Users\leona\Personal\Works\Programacion\Projects\hvac-ai-system"
+$PROYECTO = "C:\Users\leona\Personal\Works\Programacion\Projects\Cesym\repos\hvac-ai-system"
 $SCRIPT   = "$PROYECTO\scripts\sync_maestro.ps1"
 
 $accion = New-ScheduledTaskAction `
