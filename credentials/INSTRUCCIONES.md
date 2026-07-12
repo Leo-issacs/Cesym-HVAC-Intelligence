@@ -57,7 +57,7 @@ El email de la service account se ve así:
 ## Verificar que funciona
 
 ```powershell
-cd "C:\Users\leona\Personal\Works\Programacion\Projects\hvac-ai-system"
+cd "C:\Users\leona\Personal\Works\Programacion\Projects\Cesym\repos\hvac-ai-system"
 .\cesym_data_analytics\Scripts\Activate.ps1
 python -X utf8 scripts/sync_drive.py --dry-run
 ```

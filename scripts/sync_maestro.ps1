@@ -20,7 +20,7 @@ $ErrorActionPreference = "Stop"
 
 $HVAC_DIR    = $PSScriptRoot | Split-Path -Parent
 $HVAC_PY     = Join-Path $HVAC_DIR "cesym_data_analytics\Scripts\python.exe"
-$CHATBOT_DIR = "C:\Users\leona\Personal\Works\Programacion\Projects\Cesym Chatbot"
+$CHATBOT_DIR = "C:\Users\leona\Personal\Works\Programacion\Projects\Cesym\repos\Cesym Chatbot"
 $CHATBOT_PY  = Join-Path $CHATBOT_DIR "venv_Cesym_Chatbot\Scripts\python.exe"
 
 $flag = if ($DryRun) { "--dry-run" } else { $null }
